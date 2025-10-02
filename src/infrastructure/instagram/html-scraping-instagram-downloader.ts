@@ -62,6 +62,11 @@ export class HtmlScrapingInstagramDownloader
       extension
     );
 
+    let finalPath = resolvedPath;
+    if (kind === "video") {
+      finalPath = await this.reencodeForTelegram(resolvedPath);
+    }
+
     const actualExtension =
       path.extname(resolvedPath).replace(/^\./, "") || extension;
 
@@ -74,6 +79,45 @@ export class HtmlScrapingInstagramDownloader
     const instagramMetadata = this.mapMetadata(flattened, request.url);
 
     return { asset, metadata: instagramMetadata };
+  }
+
+  private async reencodeForTelegram(inputPath: string): Promise<string> {
+    const parsed = path.parse(inputPath);
+    const outputPath = path.join(parsed.dir, `${parsed.name}.tg.mp4`);
+
+    this.logger.debug("Re-encoding video for Telegram", {
+      input: inputPath,
+      output: outputPath,
+    });
+
+    try {
+      await execFileAsync("ffmpeg", [
+        "-y", // overwrite
+        "-i",
+        inputPath, // input file
+        "-c:v",
+        "libx264", // H.264
+        "-c:a",
+        "aac", // AAC
+        "-b:a",
+        "128k", // audio bitrate
+        "-vf",
+        "scale=640:-1", // resize width to 640px, preserve aspect
+        "-movflags",
+        "+faststart", // optimize for streaming
+        outputPath,
+      ]);
+
+      // Replace original with re-encoded
+      await fs.rename(outputPath, inputPath);
+      return inputPath;
+    } catch (error: any) {
+      this.logger.error("ffmpeg re-encode for Telegram failed", {
+        error,
+        inputPath,
+      });
+      return inputPath; // fallback to original
+    }
   }
 
   private async fetchMetadata(url: string): Promise<YtDlpMetadata> {
