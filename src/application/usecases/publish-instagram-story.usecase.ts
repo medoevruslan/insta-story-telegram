@@ -44,15 +44,15 @@ export class PublishInstagramStoryUseCase {
 
     await this.sendPreview(download.asset, download.metadata, finalCaption);
 
-    // try {
-    //   await this.publisher.publish(download.asset, download.metadata, options);
-    //   this.logger.info('Successfully published story to Telegram', {
-    //     mediaId: download.metadata.id,
-    //     localPath: download.asset.localPath,
-    //   });
-    // } finally {
-    //   await this.safeCleanup(download.asset.localPath);
-    // }
+    try {
+      await this.publisher.publish(download.asset, download.metadata, options);
+      this.logger.info("Successfully published story to Telegram", {
+        mediaId: download.metadata.id,
+        localPath: download.asset.localPath,
+      });
+    } finally {
+      await this.safeCleanup(download.asset.localPath);
+    }
   }
 
   private async sendPreview(
